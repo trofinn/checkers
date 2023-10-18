@@ -1,6 +1,7 @@
 import com.google.gson.Gson;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Responsible for determining the gamemode (1- or 2-player), running the game, and handling game exit.
@@ -20,8 +21,7 @@ public class GameRunner
     // define an easily accesible "end" variable
     private static boolean endGameNow = false;
 
-    public static void main(String[] args)
-    {
+    public static void main(String[] args) throws InterruptedException {
         // generate basic board and setup
         Board board = new Board(SIZE);
 
@@ -29,16 +29,17 @@ public class GameRunner
         // define abstract classes, to be assigned a concrete class after deciding gamemode
         HumanPlayer player1 = new HumanPlayer(true);
         HumanPlayer player2 = new HumanPlayer(false);
-        clearScreen();
+        //clearScreen();
         String raw = input.nextLine().toLowerCase();
         if(raw.trim().equals("{\"init\":{\"players\":2}}")) {
+            TimeUnit.SECONDS.sleep(1);
             while ( !endGame(board) )
             {
-
+                clearScreen();
                 if (isPlayer1)
                 {
                     jsonObject.requested_actions = new ArrayList<>();
-                    RequestedAction requestedAction = new RequestedAction("CLICK", "1");
+                    RequestedAction requestedAction = new RequestedAction("CLICK", 1);
                     jsonObject.requested_actions.add(requestedAction);
                     ArrayList<Piece> showAllPieces = new ArrayList<>();
                     ArrayList<Piece> nextActionForBlack = new ArrayList<>();
@@ -63,7 +64,7 @@ public class GameRunner
                 else
                 {
                     jsonObject.requested_actions = new ArrayList<>();
-                    RequestedAction requestedAction = new RequestedAction("CLICK", "2");
+                    RequestedAction requestedAction = new RequestedAction("CLICK", 2);
                     jsonObject.requested_actions.add(requestedAction);
                     ArrayList<Piece> showAllPieces = new ArrayList<>();
                     ArrayList<Piece> nextActionForWhite = new ArrayList<>();
@@ -440,8 +441,27 @@ class HumanPlayer
      */
     public Board getMove(Board board, JsonObject jsonObject, String player)
     {
+        List<Display> displayBoard = Arrays.asList(new Display(1), new Display(2));
+        jsonObject.displays = displayBoard;
+        for(Piece[] piece: board.boardArray) {
+            for (Piece p: piece
+            ) {
+                if(p != null ) {
+                    for (Display display: jsonObject.displays) {
+                        if(p.isWhite) {
+                            display.content.add(new Circle(Integer.toString(p.x * 50 + 25), Integer.toString(p.y * 50 + 25),
+                                    Integer.toString(20), "red"));
+                        }
+                        else {
+                            display.content.add(new Circle(Integer.toString(p.x * 50 + 25), Integer.toString(p.y * 50 + 25),
+                                    Integer.toString(20), "blue"));
+                        }
+                    }
+                }
+            }
+        }
         Gson gson = new Gson();
-        System.out.println(gson.toJson(jsonObject));
+        System.out.println("xxx" + gson.toJson(jsonObject).trim() + "xxx");
         // display board to help user (without possible moves)
         displayBoard(board, null, player, jsonObject);
 
@@ -489,7 +509,7 @@ class HumanPlayer
     {
         // clear the screen for board display
         GameRunner.clearScreen();
-        RequestedAction requestedActionForChoosingWhereToGo = new RequestedAction("CLICK", player);
+        RequestedAction requestedActionForChoosingWhereToGo = new RequestedAction("CLICK", Integer.parseInt(player));
         ArrayList<RequestedAction> listOfRequestedActions = new ArrayList<>(Arrays.asList(requestedActionForChoosingWhereToGo));
         // include a hidden top row for coordinates
         if(possibleMoves != null) {
@@ -518,7 +538,6 @@ class HumanPlayer
 
                                 }
                                 // if one here, put the list index (one-indexed) here as a char
-                                System.out.print("| " + Integer.toString(i+1) + " ");
                                 moveFound = true;
                                 Zone tempZone = new Zone(x * 50, y * 50, 50, 50);
                                 listOfRequestedActions.get(0).zones.add(tempZone);
@@ -535,7 +554,7 @@ class HumanPlayer
 
             jsonObject.requested_actions = listOfRequestedActions;
             Gson gson = new Gson();
-            System.out.println(gson.toJson(jsonObject));
+            System.out.println("xxx" + gson.toJson(jsonObject).trim() + "xxx");
             for(Move move : possibleMoves) {
                 for (Display display: jsonObject.displays) {
                     display.eliminateGreenCircles(Integer.toString(move.x2), Integer.toString(move.y2));
@@ -562,7 +581,6 @@ class HumanPlayer
                 raw = input.nextLine().toLowerCase();
                 Gson gson = new Gson();
                 var actions = gson.fromJson(raw, Actions.class);
-                System.out.println(actions);
                 int x = Integer.parseInt(actions.actions.get(0).x) / 50;
                 int y = Integer.parseInt(actions.actions.get(0).y) / 50;
                 // ensure there's no out-of-bounds entries
@@ -606,7 +624,6 @@ class HumanPlayer
                 String raw = input.nextLine().toLowerCase();
                 Gson gson = new Gson();
                 var actions = gson.fromJson(raw, Actions.class);
-                System.out.println(actions);
                 int x = Integer.parseInt(actions.actions.get(0).x) / 50;
                 int y = Integer.parseInt(actions.actions.get(0).y) / 50;
 
@@ -1028,7 +1045,7 @@ class Piece
 
 class JsonObject {
     public List<Display> displays = Arrays.asList(new Display(1), new Display(2));
-    public ArrayList<RequestedAction> requested_actions = new ArrayList<>(List.of(new RequestedAction("", "")));
+    public ArrayList<RequestedAction> requested_actions = new ArrayList<>(List.of(new RequestedAction("", 1)));
     public GameState game_state = new GameState();
 
     public void addAction(RequestedAction requestedAction) {
@@ -1056,7 +1073,17 @@ class Display {
             new Line("0", "200", "450", "200"),
             new Line("0", "250", "450", "250"),
             new Line("0", "300", "450", "300"),
-            new Line("0", "350", "450", "350")
+            new Line("0", "350", "450", "350"),
+            new Line("0", "400", "450", "400"),
+            new Line("50", "0", "50", "450"),
+            new Line("100", "0", "100", "450"),
+            new Line("150", "0", "150", "450"),
+            new Line("200", "0", "200", "450"),
+            new Line("250", "0", "250", "450"),
+            new Line("300", "0", "300", "450"),
+            new Line("350", "0", "350", "450"),
+            new Line("400", "0", "400", "450")
+
     ));
     public int player;
 
@@ -1131,10 +1158,10 @@ class Circle extends DisplayContent {
 
 class RequestedAction {
     public String type;
-    public String player;
+    public int player;
     public ArrayList<Zone> zones = new ArrayList<>();
 
-    public RequestedAction(String type, String player) {
+    public RequestedAction(String type, int player) {
         this.type = type;
         this.player = player;
     }
